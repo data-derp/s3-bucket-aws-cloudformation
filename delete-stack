@@ -12,6 +12,8 @@ delete-stack() {
   pushd "${script_dir}" > /dev/null
     stack_name="${project_name}-${module_name}-co2-tmp-s3-bucket"
     if [[ $(aws cloudformation describe-stacks --stack-name "${stack_name}" --region "${aws_region}") ]]; then
+      echo "Emptying bucket s3://${project_name}-${module_name}..."
+      aws s3 rm "s3://${project_name}-${module_name}" --recursive
       echo "Stack (${stack_name}) exists. Deleting..."
       aws cloudformation delete-stack --stack-name "${stack_name}" \
         --stack-name "${stack_name}" \
@@ -54,5 +56,4 @@ if [ -z "${project}" ] || [ -z "${module}" ] || [ -z "${region}" ]; then
     usage
 fi
 
-aws s3 rm "s3://${project}-${module}" --recursive
 delete-stack "${project}" "${module}" "${region}"
