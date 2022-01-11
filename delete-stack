@@ -53,4 +53,6 @@ shift $((OPTIND-1))
 if [ -z "${project}" ] || [ -z "${module}" ] || [ -z "${region}" ]; then
     usage
 fi
+
+aws s3 rm "s3://${project}-${module}" --recursive
 delete-stack "${project}" "${module}" "${region}"
