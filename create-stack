@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+set -e
+
+script_dir=$(cd "$(dirname "$0")" ; pwd -P)
+
+create-update() {
+  pushd "${script_dir}" > /dev/null
+    project_name="${1}"
+    module_name="${2}"
+    aws_region="${3}"
+
+    for i in project_name module_name aws_region; do
+      if [ -z "!{i}" ]; then
+        echo "${i} not set. Usage <func: create-update> PROJECT_NAME MODULE_NAME AWS_REGION"
+        exit 1
+      fi
+    done
+
+    create-update-stack "${project_name}" "${module_name}" "${aws_region}"
+  popd > /dev/null
+}
+
+create-update-stack() {
+  project_name="${1}"
+  module_name="${2}"
+  aws_region="${3}"
+
+  pushd "${script_dir}" > /dev/null
+    stack_name="${project_name}-${module_name}-co2-tmp-s3-bucket"
+    if [[ ! $(aws cloudformation describe-stacks --stack-name "${stack_name}" --region ${aws_region}) ]]; then
+      echo "Stack (${stack_name}) does not exist. Creating..."
+      aws cloudformation create-stack --stack-name "${project_name}-${module_name}-co2-tmp-s3-bucket" \
+        --template-body file://./template.yaml \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --region ${aws_region} \
+        --parameters ParameterKey=ProjectName,ParameterValue=${project_name} ParameterKey=ModuleName,ParameterValue=${module_name}
+    else
+      echo "Stack (${stack_name}) exists. Creating ChangeSet..."
+      now=$(date +%s)
+      aws cloudformation create-change-set \
+        --stack-name "${stack_name}" \
+        --change-set-name "update-${now}" \
+        --template-body file://./template.yaml \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --region "${aws_region}" \
+        --parameters ParameterKey=ProjectName,ParameterValue=${project_name} ParameterKey=ModuleName,ParameterValue=${module_name}
+
+      echo "Waiting 20 seconds for the ChangeSet to create..."
+      sleep 20
+      echo "Executing ChangeSet..."
+      aws cloudformation execute-change-set \
+        --change-set-name "update-${now}" \
+        --stack-name "${stack_name}" \
+        --region "${aws_region}"
+      echo "ChangeSet execution complete."
+    fi
+  popd > /dev/null
+
+}
+
+usage() { echo "Usage: $0 [-p <project name: string>] [-m <module name: string>] [-r <aws region: string>]" 1>&2; exit 1; }
+
+while getopts ":p:m:r:" o; do
+    case "${o}" in
+        p)
+            project=${OPTARG}
+            ;;
+        m)
+            module=${OPTARG}
+            ;;
+        r)
+            region=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${project}" ] || [ -z "${module}" ] || [ -z "${region}" ]; then
+    usage
+fi
+
+create-update ${project} ${module} ${region}
+echo "View your Cloudformation Stack at https://${region}.console.aws.amazon.com/cloudformation/home?region=${region}#/stacks"
