@@ -35,25 +35,6 @@ create-update-stack() {
         --capabilities CAPABILITY_NAMED_IAM \
         --region ${aws_region} \
         --parameters ParameterKey=ProjectName,ParameterValue=${project_name} ParameterKey=ModuleName,ParameterValue=${module_name}
-    else
-      echo "Stack (${stack_name}) exists. Creating ChangeSet..."
-      now=$(date +%s)
-      aws cloudformation create-change-set \
-        --stack-name "${stack_name}" \
-        --change-set-name "update-${now}" \
-        --template-body file://./template.yaml \
-        --capabilities CAPABILITY_NAMED_IAM \
-        --region "${aws_region}" \
-        --parameters ParameterKey=ProjectName,ParameterValue=${project_name} ParameterKey=ModuleName,ParameterValue=${module_name}
-
-      echo "Waiting 20 seconds for the ChangeSet to create..."
-      sleep 20
-      echo "Executing ChangeSet..."
-      aws cloudformation execute-change-set \
-        --change-set-name "update-${now}" \
-        --stack-name "${stack_name}" \
-        --region "${aws_region}"
-      echo "ChangeSet execution complete."
     fi
   popd > /dev/null
 
