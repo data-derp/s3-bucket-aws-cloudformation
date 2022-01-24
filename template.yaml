@@ -15,10 +15,10 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: "Private"
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: "aws:kms"
+#      BucketEncryption:
+#        ServerSideEncryptionConfiguration:
+#          - ServerSideEncryptionByDefault:
+#              SSEAlgorithm: "aws:kms"
       BucketName: !Sub "${ProjectName}-${ModuleName}"
       Tags:
         - Key: Project
